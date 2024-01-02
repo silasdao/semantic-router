@@ -22,16 +22,18 @@ def is_valid(layer_config: str) -> bool:
 
         if isinstance(output_json, list):
             for item in output_json:
-                missing_keys = [key for key in required_keys if key not in item]
-                if missing_keys:
+                if missing_keys := [
+                    key for key in required_keys if key not in item
+                ]:
                     logger.warning(
                         f"Missing keys in layer config: {', '.join(missing_keys)}"
                     )
                     return False
             return True
         else:
-            missing_keys = [key for key in required_keys if key not in output_json]
-            if missing_keys:
+            if missing_keys := [
+                key for key in required_keys if key not in output_json
+            ]:
                 logger.warning(
                     f"Missing keys in layer config: {', '.join(missing_keys)}"
                 )
@@ -150,22 +152,21 @@ class RouteLayer:
         self.encoder = encoder if encoder is not None else CohereEncoder()
         self.routes: list[Route] = routes if routes is not None else []
         # decide on default threshold based on encoder
-        if isinstance(encoder, OpenAIEncoder):
+        if isinstance(encoder, OpenAIEncoder) or not isinstance(
+            encoder, CohereEncoder
+        ):
             self.score_threshold = 0.82
-        elif isinstance(encoder, CohereEncoder):
-            self.score_threshold = 0.3
         else:
-            self.score_threshold = 0.82
+            self.score_threshold = 0.3
         # if routes list has been passed, we initialize index now
-        if len(self.routes) > 0:
+        if self.routes:
             # initialize index now
             self._add_routes(routes=self.routes)
 
     def __call__(self, text: str) -> RouteChoice:
         results = self._query(text)
         top_class, top_class_scores = self._semantic_classify(results)
-        passed = self._pass_threshold(top_class_scores, self.score_threshold)
-        if passed:
+        if passed := self._pass_threshold(top_class_scores, self.score_threshold):
             # get chosen route object
             route = [route for route in self.routes if route.name == top_class][0]
             return route(text)
@@ -278,18 +279,13 @@ class RouteLayer:
         total_scores = {route: sum(scores) for route, scores in scores_by_class.items()}
         top_class = max(total_scores, key=lambda x: total_scores[x], default=None)
 
-        # Return the top class and its associated scores
         if top_class is not None:
             return str(top_class), scores_by_class.get(top_class, [])
-        else:
-            logger.warning("No classification found for semantic classifier.")
-            return "", []
+        logger.warning("No classification found for semantic classifier.")
+        return "", []
 
     def _pass_threshold(self, scores: list[float], threshold: float) -> bool:
-        if scores:
-            return max(scores) > threshold
-        else:
-            return False
+        return max(scores) > threshold if scores else False
 
     def to_config(self) -> LayerConfig:
         return LayerConfig(

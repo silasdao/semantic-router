@@ -17,8 +17,7 @@ def similarity_matrix(xq: np.ndarray, index: np.ndarray) -> np.ndarray:
 
     index_norm = norm(index, axis=1)
     xq_norm = norm(xq.T)
-    sim = np.dot(index, xq.T) / (index_norm * xq_norm)
-    return sim
+    return np.dot(index, xq.T) / (index_norm * xq_norm)
 
 
 def top_scores(sim: np.ndarray, top_k: int = 5) -> Tuple[np.ndarray, np.ndarray]:

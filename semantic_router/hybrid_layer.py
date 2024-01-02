@@ -24,12 +24,12 @@ class HybridRouteLayer:
         self.sparse_encoder = BM25Encoder()
         self.alpha = alpha
         # decide on default threshold based on encoder
-        if isinstance(encoder, OpenAIEncoder):
+        if isinstance(encoder, OpenAIEncoder) or not isinstance(
+            encoder, CohereEncoder
+        ):
             self.score_threshold = 0.82
-        elif isinstance(encoder, CohereEncoder):
-            self.score_threshold = 0.3
         else:
-            self.score_threshold = 0.82
+            self.score_threshold = 0.3
         # if routes list has been passed, we initialize index now
         if routes:
             # initialize index now
@@ -40,8 +40,7 @@ class HybridRouteLayer:
     def __call__(self, text: str) -> str | None:
         results = self._query(text)
         top_class, top_class_scores = self._semantic_classify(results)
-        passed = self._pass_threshold(top_class_scores, self.score_threshold)
-        if passed:
+        if passed := self._pass_threshold(top_class_scores, self.score_threshold):
             return top_class
         else:
             return None
@@ -163,15 +162,10 @@ class HybridRouteLayer:
         total_scores = {route: sum(scores) for route, scores in scores_by_class.items()}
         top_class = max(total_scores, key=lambda x: total_scores[x], default=None)
 
-        # Return the top class and its associated scores
         if top_class is not None:
             return str(top_class), scores_by_class.get(top_class, [])
-        else:
-            logger.warning("No classification found for semantic classifier.")
-            return "", []
+        logger.warning("No classification found for semantic classifier.")
+        return "", []
 
     def _pass_threshold(self, scores: list[float], threshold: float) -> bool:
-        if scores:
-            return max(scores) > threshold
-        else:
-            return False
+        return max(scores) > threshold if scores else False

@@ -17,16 +17,18 @@ def is_valid(route_config: str) -> bool:
 
         if isinstance(output_json, list):
             for item in output_json:
-                missing_keys = [key for key in required_keys if key not in item]
-                if missing_keys:
+                if missing_keys := [
+                    key for key in required_keys if key not in item
+                ]:
                     logger.warning(
                         f"Missing keys in route config: {', '.join(missing_keys)}"
                     )
                     return False
             return True
         else:
-            missing_keys = [key for key in required_keys if key not in output_json]
-            if missing_keys:
+            if missing_keys := [
+                key for key in required_keys if key not in output_json
+            ]:
                 logger.warning(
                     f"Missing keys in route config: {', '.join(missing_keys)}"
                 )
@@ -69,18 +71,14 @@ class Route(BaseModel):
         Generate a dynamic Route object from a function or Pydantic model using LLM
         """
         schema = function_call.get_schema(item=entity)
-        dynamic_route = cls._generate_dynamic_route(function_schema=schema)
-        return dynamic_route
+        return cls._generate_dynamic_route(function_schema=schema)
 
     @classmethod
     def _parse_route_config(cls, config: str) -> str:
         # Regular expression to match content inside <config></config>
         config_pattern = r"<config>(.*?)</config>"
-        match = re.search(config_pattern, config, re.DOTALL)
-
-        if match:
-            config_content = match.group(1).strip()  # Get the matched content
-            return config_content
+        if match := re.search(config_pattern, config, re.DOTALL):
+            return match.group(1).strip()
         else:
             raise ValueError("No <config></config> tags found in the output.")
 

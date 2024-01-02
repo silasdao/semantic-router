@@ -24,11 +24,10 @@ def llm(prompt: str) -> str | None:
             max_tokens=200,
         )
 
-        output = completion.choices[0].message.content
-
-        if not output:
+        if output := completion.choices[0].message.content:
+            return output
+        else:
             raise Exception("No output generated")
-        return output
     except Exception as e:
         logger.error(f"LLM error: {e}")
         raise Exception(f"LLM error: {e}")
